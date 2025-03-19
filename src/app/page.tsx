@@ -4,8 +4,61 @@ import Image from "next/image";
 import { ConnectButton } from "thirdweb/react";
 import thirdwebIcon from "@public/thirdweb.svg";
 import { client } from "./client";
+import {
+  inAppWallet,
+  createWallet,
+  unlinkProfile,
+  getProfiles,
+} from "thirdweb/wallets";
+
+const wallets = [
+  inAppWallet({
+    auth: {
+      options: ["x", "github"], // Allow Google and GitHub login
+    },
+  }),
+  createWallet("io.metamask"),
+  createWallet("com.coinbase.wallet"),
+  createWallet("me.rainbow"),
+  createWallet("io.rabby"),
+  createWallet("io.zerion.wallet"),
+];
 
 export default function Home() {
+  const handleUnlinkGitHub = async () => {
+    try {
+      // Get the profiles
+      const profiles = await getProfiles({ client });
+      console.log("Profiles:", profiles); // Log the profiles to ensure correct structure
+
+      // Find the GitHub profile
+      const githubProfile = profiles.find(profile => profile.type === "github");
+
+      if (!githubProfile) {
+        console.log("No GitHub profile found. Please ensure the GitHub account is properly linked.");
+        return;
+      }
+
+      // Check the profile format being passed to unlinkProfile
+      console.log("GitHub Profile to Unlink:", githubProfile);
+
+      // Unlink the GitHub profile
+      const updatedProfiles = await unlinkProfile({
+        client,
+        profileToUnlink: githubProfile, // Pass the profile to unlink
+      });
+
+      console.log("Updated Profiles:", updatedProfiles); // Log the updated profiles after unlinking
+    } catch (error) {
+      console.error("Error unlinking GitHub profile:", error);
+      if (error instanceof Error) {
+        // Handle specific error details, if any
+        alert(error.message || "An error occurred while unlinking the GitHub profile.");
+      }
+    }
+  };
+
+
   return (
     <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-lg mx-auto">
       <div className="py-20">
@@ -14,6 +67,7 @@ export default function Home() {
         <div className="flex justify-center mb-20">
           <ConnectButton
             client={client}
+            wallets={wallets}
             appMetadata={{
               name: "Example App",
               url: "https://example.com",
@@ -21,7 +75,16 @@ export default function Home() {
           />
         </div>
 
-        <ThirdwebResources />
+        {/* Add the button to unlink GitHub */}
+        <div className="flex justify-center">
+          {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+          <button
+            onClick={handleUnlinkGitHub}
+            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+          >
+            Unlink GitHub
+          </button>
+        </div>
       </div>
     </main>
   );
@@ -44,57 +107,7 @@ function Header() {
         <span className="text-zinc-300 inline-block mx-1"> + </span>
         <span className="inline-block -skew-x-6 text-blue-500"> Next.js </span>
       </h1>
-
-      <p className="text-zinc-300 text-base">
-        Read the{" "}
-        <code className="bg-zinc-800 text-zinc-300 px-2 rounded py-1 text-sm mx-1">
-          README.md
-        </code>{" "}
-        file to get started.
-      </p>
     </header>
   );
 }
 
-function ThirdwebResources() {
-  return (
-    <div className="grid gap-4 lg:grid-cols-3 justify-center">
-      <ArticleCard
-        title="thirdweb SDK Docs"
-        href="https://portal.thirdweb.com/typescript/v5"
-        description="thirdweb TypeScript SDK documentation"
-      />
-
-      <ArticleCard
-        title="Components and Hooks"
-        href="https://portal.thirdweb.com/typescript/v5/react"
-        description="Learn about the thirdweb React components and hooks in thirdweb SDK"
-      />
-
-      <ArticleCard
-        title="thirdweb Dashboard"
-        href="https://thirdweb.com/dashboard"
-        description="Deploy, configure, and manage your smart contracts from the dashboard."
-      />
-    </div>
-  );
-}
-
-function ArticleCard(props: {
-  title: string;
-  href: string;
-  description: string;
-}) {
-  return (
-    <a
-      href={props.href + "?utm_source=next-template"}
-      target="_blank"
-      className="flex flex-col border border-zinc-800 p-4 rounded-lg hover:bg-zinc-900 transition-colors hover:border-zinc-700"
-    >
-      <article>
-        <h2 className="text-lg font-semibold mb-2">{props.title}</h2>
-        <p className="text-sm text-zinc-400">{props.description}</p>
-      </article>
-    </a>
-  );
-}
